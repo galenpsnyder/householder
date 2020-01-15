@@ -13,8 +13,9 @@ A <- matrix(c(35, 1,  6,  26, 19, 24,
               4,  36, 29, 13, 18, 11), 6, 6, byrow = T)
 
 
-### function to generate householder reflections
-house_ref <- function(x){
+
+### function to generate householder vectors
+house_vec <- function(x){
   nu <- sqrt(sum(x^2))
   if(nu != 0){
     u <- x/nu
@@ -26,16 +27,19 @@ house_ref <- function(x){
   }
   u
 }
-house_ref(x)
-u <- house_ref(x)
+house_vec(x)
+u <- house_vec(x)
 
-### function to generate householder matrix
+
+
+### function to generate householder reflections
 ### where u is a householder reflection and x is a vector of interest
-house_mat <- function(u, x){
+house_ref <- function(u, x){
   x - u%*%crossprod(u, x)
 }
-house_mat(u = u, x = x)
-house_mat(u = u, x = diag(1, 3))
+house_ref(u = u, x = x)
+house_ref(u = u, x = diag(1, 3))
+
 
 
 ### computes qr factorization via householder reflections
@@ -48,10 +52,10 @@ house_qr <- function(x){
   qraux <- numeric(length = k)
   R <- x
   for(i in 1:k){
-    u <- house_ref(R[i:m, i])
+    u <- house_vec(R[i:m, i])
     # U[i:m, i] <- u
     qraux[i] <- u[1]
-    R[i:m, i:n] <- house_mat(u, R[i:m, i:n])
+    R[i:m, i:n] <- house_ref(u, R[i:m, i:n])
     # R[-(1:i), i] <- 0
     R[-(1:i), i] <- u[-1]
   }
@@ -60,6 +64,7 @@ house_qr <- function(x){
 }
 QR <- house_qr(A)
 qr(A)
+
 
 
 ### function which returns R portion of qr decomposition
@@ -74,7 +79,9 @@ house_qrR <- function(x){
 }
 
 
+
 ### function which returns matrix-vector or matrix-matrix product Qy
+### does not form Q explicitly
 house_qrqy <- function(x, y){
   r <- x$qr
   qraux <- x$qraux
@@ -85,14 +92,16 @@ house_qrqy <- function(x, y){
   for(j in n:1){
     U[j] <- qraux[j]
     U[-(1:j)] <- r[-(1:j), j]
-    Z <- house_mat(U, Z)
+    Z <- house_ref(U, Z)
   }
   Z
 }
 house_qrqy(QR, diag(1, 6))
 
 
+
 ### function which returns matrix-vector or matrix-matrix product Qty
+### does not form Q explicitly
 house_qrqty <- function(x, y){
   r <- x$qr
   qraux <- x$qraux
@@ -103,14 +112,16 @@ house_qrqty <- function(x, y){
   for(j in 1:n){
     U[j] <- qraux[j]
     U[-(1:j)] <- r[-(1:j), j]
-    Z <- house_mat(U, Z)
+    Z <- house_ref(U, Z)
+    U <- U - U
   }
   Z
 }
 house_qrqy(QR, diag(1, 6))
 
 
-###function which returns Q portion of qr decomposition
+
+### function which returns Q portion of qr decomposition
 ### special case of Qy where y is a diagonal matrix of size == nrow(qr)
 house_qrQ <- function(x){
   r <- x$qr
@@ -122,10 +133,30 @@ house_qrQ <- function(x){
   for(j in n:1){
     U[j] <- qraux[j]
     U[-(1:j)] <- r[-(1:j), j]
-    Z <- house_mat(U, Z)
+    Z <- house_ref(U, Z)
   }
   Z
 }
+
+
+
+### solve system of linear equations via backsubstitution
+house_solveqr <- function(x, y){
+  R <- x$qr
+  y <- house_qrqty(x, y)
+  n <- ncol(R)
+  b <- numeric(length = n)
+  b[n] <- y[n] / R[n, n]
+  for(i in (n-1):1){
+    s <- y[i]
+    for(j in n:(i+1)){
+      s <- s - R[i, j]*b[j]
+    }
+    b[i] <- s / R[i, i]
+  }
+  b
+}
+house_solveqr(QR, x)
 
 
 

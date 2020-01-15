@@ -33,7 +33,7 @@ u <- house_vec(x)
 
 
 ### function to generate householder reflections
-### where u is a householder reflection and x is a vector of interest
+### where u is a householder vector and x is the vector to reflect
 house_ref <- function(u, x){
   x - u%*%crossprod(u, x)
 }

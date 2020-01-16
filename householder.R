@@ -44,13 +44,14 @@ house_ref(u = u, x = diag(1, 3))
 
 ### computes qr factorization via householder reflections
 ### stores in compact form a la LINPACK
-house_qr <- function(x){
+house_qr <- function(x, tol = 1e-07){
   m <- nrow(x)
   n <- ncol(x)
   k <- min(m, n)
   # U <- matrix(0, m, n)
   qraux <- numeric(length = k)
   R <- x
+  rank <- 0L
   for(i in 1:k){
     u <- house_vec(R[i:m, i])
     # U[i:m, i] <- u
@@ -58,8 +59,9 @@ house_qr <- function(x){
     R[i:m, i:n] <- house_ref(u, R[i:m, i:n])
     # R[-(1:i), i] <- 0
     R[-(1:i), i] <- u[-1]
+    if(abs(R[i, i]) > tol) rank <- rank + 1
   }
-  out <- list(qr = R, qraux = qraux)
+  out <- list(qr = R, rank = rank, qraux = qraux)
   out
 }
 QR <- house_qr(A)
